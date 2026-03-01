@@ -18,7 +18,7 @@ rayEnv.proxy = function (obj) {
             // 自动检测漏补环境
             if (value === undefined && !(property in target)) {
                 const targetName = Object.prototype.toString.call(target);
-                console.warn(`[!] ⚠️  检测到漏补环境: ${targetName} 访问了未定义的属性 👉 "${property.toString()}"`);
+                console.warn(`⚠️ 检测到漏补环境: ${targetName} 访问了未定义的属性 👉 "${property.toString()}"`);
             }
 
             return value;

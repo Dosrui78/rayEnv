@@ -1,17 +1,17 @@
 // tools/config.js
 // 框架全局配置与内存管理
 
-// 初始化全局对象 turkeyEnv
-var turkeyEnv = {};
+// 初始化全局对象 cavernEnv
+var cavernEnv = {};
 
 // 框架开关控制
-turkeyEnv.button = {
+cavernEnv.button = {
     proxy: true,   // 是否开启 Proxy 代理监控
     print: true,   // 是否开启日志打印
 };
 
 // 框架内部内存，用于存储环境状态
-turkeyEnv.memory = {
+cavernEnv.memory = {
     logs: [],      // 日志记录
     listeners: {}, // 事件监听器缓存
     htmlelements: {}, // DOM 元素工厂映射
@@ -27,22 +27,22 @@ turkeyEnv.memory = {
 
 // tools/print.js
 // 日志打印工具
-turkeyEnv.print = function (msg) {
-    if (turkeyEnv.button.print) {
+cavernEnv.print = function (msg) {
+    if (cavernEnv.button.print) {
         console.log(msg);
-        turkeyEnv.memory.logs.push(msg);
+        cavernEnv.memory.logs.push(msg);
     }
 };
 
-turkeyEnv.printAll = function () {
-    console.table(turkeyEnv.memory.logs);
+cavernEnv.printAll = function () {
+    console.table(cavernEnv.memory.logs);
 };
 
 // tools/proxy.js
 // Proxy 代理监控模块
 
-turkeyEnv.proxy = function (obj) {
-    if (!turkeyEnv.button.proxy) return obj;
+cavernEnv.proxy = function (obj) {
+    if (!cavernEnv.button.proxy) return obj;
 
     return new Proxy(obj, {
         get(target, property, receiver) {
@@ -50,23 +50,23 @@ turkeyEnv.proxy = function (obj) {
 
             const value = target[property];
 
-            if (turkeyEnv.button.print) {
+            if (cavernEnv.button.print) {
                 const targetName = Object.prototype.toString.call(target);
-                turkeyEnv.print(`[get] <= target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
+                cavernEnv.print(`[get] <= target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
             }
 
             // 自动检测漏补环境
             if (value === undefined && !(property in target)) {
                 const targetName = Object.prototype.toString.call(target);
-                console.warn(`[!] ⚠️  检测到漏补环境: ${targetName} 访问了未定义的属性 👉 "${property.toString()}"`);
+                console.warn(`⚠️ 检测到漏补环境: ${targetName} 访问了未定义的属性 👉 "${property.toString()}"`);
             }
 
             return value;
         },
         set(target, property, value, receiver) {
-            if (turkeyEnv.button.print) {
+            if (cavernEnv.button.print) {
                 const targetName = Object.prototype.toString.call(target);
-                turkeyEnv.print(`[set] => target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
+                cavernEnv.print(`[set] => target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
             }
             return Reflect.set(target, property, value);
         }
@@ -75,11 +75,19 @@ turkeyEnv.proxy = function (obj) {
 
 // tools/safety.js
 // 抗检测与属性保护模块
+const setObj = function setObj(obj, prop, val) {
+    Object.defineProperty(obj, prop, {
+        value: val,
+        enumerable: false,
+        configurable: true,
+        writable: true
+    })
+};
 
 (function () {
     'use strict';
 
-    const symbol = Symbol("turkeyEnv_native_code");
+    const symbol = Symbol(Math.random()).toString(16);
     const oldToString = Function.prototype.toString;
 
     // 伪造 toString
@@ -87,16 +95,15 @@ turkeyEnv.proxy = function (obj) {
         return (typeof this === 'function' && this[symbol]) || oldToString.call(this);
     };
 
+    delete Function.prototype.toString;
     // 保护属性不被轻易枚举或修改
-    Object.defineProperty(Function.prototype, 'toString', {
-        value: newToString,
-        enumerable: false,
-        configurable: true,
-        writable: true
-    });
+    setObj(Function.prototype, 'toString', newToString);
+
+    // 保护属性不被轻易枚举或修改
+    setObj(newToString, symbol, `function toString() { [native code] }`);
 
     // 保护函数：使其 toString 返回 [native code]
-    turkeyEnv.protect = function (func) {
+    cavernEnv.protect = function (func) {
         Object.defineProperty(func, symbol, {
             value: `function ${func.name || ""}() { [native code] }`,
             enumerable: false,
@@ -105,7 +112,32 @@ turkeyEnv.proxy = function (obj) {
     };
 
 })();
-window = turkeyEnv.proxy(global);
+// 1.定义Window对象
+var Window = function Window() {
+    throw new Error("Illegal Constructor");
+}; cavernEnv.protect(Window);
+var window = this; cavernEnv.protect(window);
+
+// 2.定义Window的Symbol.ToStringTag
+Object.defineProperties(Window.prototype, {
+    [Symbol.toStringTag]: {
+        value: "Window",
+        configurable: true,
+    }
+})
+
+// 4.定义原型链
+window.__proto__ = Window.prototype;
+
+// 5.代理Window的属性
+Window = cavernEnv.proxy(Window);
+window = cavernEnv.proxy(window);
+
+window.top = window;
+window.parent = window;
+window.self = window;
+window = cavernEnv.proxy(window);
+document = cavernEnv.proxy({});
 // Dynamic injected content
 $_ts = window['$_ts']; if (!$_ts) $_ts = {}; $_ts.nsd = 10549; $_ts.cd = "qtqdrpAloP3DkPEkcaqbrc3mkf3hqc3kxGqlmG7qxG3LDrVdEaGlEG7qhqVbqGgKxGliEGEbrqgPrAlqtrGxcaqbrP3okf3br1WkrrGhqc3qxGlimP3lkPEmqAqbqP3kkf3bqcWtrrabqAAPqP3orAGhqc3mxGEimG7ttrGhxGAbrsqOcaAMcaqbkc3okf3hqc3mxGEimG7qxGLbqAgKxG3OxFErJOlcrslTLPW5WPsNbSLI0O5GsVUUfgu6OOOMvrlsl0C4i0xAGL4JBGqlWaQoqFW7qZxRIcVu9T2YUYmuH6obMVw1UYwzJIwVJKpkxsTFuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzObTTFKyFtnipJVxdFs35JIfvQllTF9fEaTxaFK2CxsByMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6ihCyaMbzFh3q6hb2XY2TLaVN6YYmLpKO.32ECsCeqEyf3MvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBhDz6FCzQOPlTQKwLWkOlA2xdp0mhw7whQOpvACrqGk2MF6w.Fn6WwbSNhb2nMQgBMvrXFnzBTCe7tKSnFC6dhnEZMC2dY82jQsRiVbrR0CATtuJawKu2EsN8Mox.M3yzwK2XtC20ubZ7F6w.Fn6WwbSNhb2nMQy8hcwqFsmcb0Q03K25W0U6JTxwM92eAHxlEOeRFUxzuPeXQDy.tCdUMCaNMox.M3yzwK2XtC20ubewt1rmw9.jMCEaplYNpwG4RbTxFCVnSmJfxufQFUsiMnS.wCz.hQSCMD9XFUxzuPeXQDy.tCdUMCS3hPYlQQfhs2YMs2fLuKpVAOJBpVUMKKmlEkTQMewBMc27QbzzObTTFKg.FUsiMnS.wCz.hQSCMD2ItnYhgmJLQKpEWVnWpbpeFsrGRzmyMDRkxsTFuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzObTTFKyFtnHN1vrZwV2nW8eSMDfGQ6RkyKrFMsJDxsByMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6ihCyaMbzFh3rK1YrBskxHakpTwmrkWbH.sUQ6sVzCEyf3MvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBhDz6FCzQOPmXpkr6YChgiv2nhoqupwR2VTw4QDzqGk2MU292K14qwv2GQcNNRLTSRURzQvYPSnSv3oRx3vMBRvJC3CrPA7TCMvlGt6JuTCRwtY92K14JMC2uRnN9FQJ6hCpbFbyBOUmBFbZL3DsKAU2WRPV.wwrCRYGXUcYIOKruMDYNx16KQUYGUTL.MewBMc27QbzzObTTFKg.FUsiMnS.wCz.UEgfQmNi1veoeTLnM6zkIYIAKOJCiCYIAEqyKCz6FC7zuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzdnZPQKfCIUvUpCpjWKpDJQ70FDrhV2Yn0nl_UbSnFCCiMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6iUPav8bJqYBxARbwT19aC2upWQlfSMTHjQPEdKK2nMQgBMvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBUUGXFUxzu2gtrwfXICHf3YJliOSWJWSWK9263uSO46wKVlwqpO.g3KRbVOpSiR2X1CeKWmyX2OfVJK9CFOoUJ9mOVlEZwZRlRbmDRsxpZ0aTHONWVlIxRlmzR2eU8x2xMoxGMTwvasruQKqNWsFYWblnJP2zQN2F3OQaQYTHC9y9JU3NWsFYWblnJP2zQN29s6rD30xzamJmY0WZR2UqpvNJY6mcR5S7i6V0WvRWgD3nsopfJkjMKY2x3YR8Kwm_3VE7WsqC9CE6W1Szwk..MC7eV0YAFdJP8DW7WsqC9CE6W1SzwqDPqalTqG3TqMm.womnwk0y9sL6HsL6Jsi3JuACqGlSJNVn3sEcrklC2aWtJkEdJkcYiOqSJGQkJRE_JGV1SGWe0ILlHdyLP5hgcB5TqAQUvZq5clCvjJqqqqqqqqqqqqDc24prXd9wuVc61yD0xg.dw9TN20NdGs48F8RzN3O38JGkcsq4JsWy2sAaWaEDJaDLWOQnWkVdJNqTJGVN3Kp62bTDM6NftVkUKUwfMTTAQ5mtpbzSW6TW4bTh1DpJVmcKsY2awOmJsFEkqqACra3SLGE6rAEoraDbUcpBwGQkULRQQqVDKcJ2ZqWlKPR9FADGWkQmqkWdqFWu"; if ($_ts.lcd) $_ts.lcd();
 

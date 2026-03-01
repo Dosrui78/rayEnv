@@ -3,8 +3,8 @@ const fs = require('fs');
 
 function getCode() {
     const windowCode = fs.readFileSync(`${__dirname}/Window.js`, 'utf-8') + "\r\n";
-
-    return windowCode;
+    const documentCode = fs.readFileSync(`${__dirname}/Document.js`, 'utf-8') + "\r\n";
+    return windowCode + documentCode;
 }
 
 

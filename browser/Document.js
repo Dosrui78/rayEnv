@@ -1,0 +1,1 @@
+document = rayEnv.proxy({});
