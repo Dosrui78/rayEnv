@@ -4,6 +4,11 @@
 // 初始化全局对象 rayEnv
 var rayEnv = {};
 
+// 网站控制
+rayEnv.target = [
+    "ouyeel"
+];
+
 // 框架开关控制
 rayEnv.button = {
     proxy: true,   // 是否开启 Proxy 代理监控

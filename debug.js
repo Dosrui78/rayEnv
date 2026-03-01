@@ -1,17 +1,22 @@
 // tools/config.js
 // 框架全局配置与内存管理
 
-// 初始化全局对象 cavernEnv
-var cavernEnv = {};
+// 初始化全局对象 cloudEnv
+var cloudEnv = {};
+
+// 网站控制
+cloudEnv.target = [
+    "ouyeel"
+];
 
 // 框架开关控制
-cavernEnv.button = {
+cloudEnv.button = {
     proxy: true,   // 是否开启 Proxy 代理监控
     print: true,   // 是否开启日志打印
 };
 
 // 框架内部内存，用于存储环境状态
-cavernEnv.memory = {
+cloudEnv.memory = {
     logs: [],      // 日志记录
     listeners: {}, // 事件监听器缓存
     htmlelements: {}, // DOM 元素工厂映射
@@ -27,22 +32,22 @@ cavernEnv.memory = {
 
 // tools/print.js
 // 日志打印工具
-cavernEnv.print = function (msg) {
-    if (cavernEnv.button.print) {
+cloudEnv.print = function (msg) {
+    if (cloudEnv.button.print) {
         console.log(msg);
-        cavernEnv.memory.logs.push(msg);
+        cloudEnv.memory.logs.push(msg);
     }
 };
 
-cavernEnv.printAll = function () {
-    console.table(cavernEnv.memory.logs);
+cloudEnv.printAll = function () {
+    console.table(cloudEnv.memory.logs);
 };
 
 // tools/proxy.js
 // Proxy 代理监控模块
 
-cavernEnv.proxy = function (obj) {
-    if (!cavernEnv.button.proxy) return obj;
+cloudEnv.proxy = function (obj) {
+    if (!cloudEnv.button.proxy) return obj;
 
     return new Proxy(obj, {
         get(target, property, receiver) {
@@ -50,9 +55,9 @@ cavernEnv.proxy = function (obj) {
 
             const value = target[property];
 
-            if (cavernEnv.button.print) {
+            if (cloudEnv.button.print) {
                 const targetName = Object.prototype.toString.call(target);
-                cavernEnv.print(`[get] <= target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
+                cloudEnv.print(`[get] <= target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
             }
 
             // 自动检测漏补环境
@@ -64,9 +69,9 @@ cavernEnv.proxy = function (obj) {
             return value;
         },
         set(target, property, value, receiver) {
-            if (cavernEnv.button.print) {
+            if (cloudEnv.button.print) {
                 const targetName = Object.prototype.toString.call(target);
-                cavernEnv.print(`[set] => target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
+                cloudEnv.print(`[set] => target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
             }
             return Reflect.set(target, property, value);
         }
@@ -103,7 +108,7 @@ const setObj = function setObj(obj, prop, val) {
     setObj(newToString, symbol, `function toString() { [native code] }`);
 
     // 保护函数：使其 toString 返回 [native code]
-    cavernEnv.protect = function (func) {
+    cloudEnv.protect = function (func) {
         Object.defineProperty(func, symbol, {
             value: `function ${func.name || ""}() { [native code] }`,
             enumerable: false,
@@ -112,11 +117,48 @@ const setObj = function setObj(obj, prop, val) {
     };
 
 })();
+
+// tools/inject.js
+// 配置注入模块：将目标网站配置注入到对应全局对象
+
+cloudEnv.inject = function (config) {
+    if (!config) return;
+
+    for (var objName in config) {
+        var target;
+
+        // 尝试获取全局对象，不存在则自动创建
+        try {
+            target = eval(objName);
+        } catch (e) {
+            // 全局对象不存在，创建一个空对象并挂到全局
+            target = {};
+            eval(objName + " = target");
+            cloudEnv.print(`[inject] 🆕 创建全局对象: ${objName}`);
+        }
+
+        var props = config[objName];
+        for (var prop in props) {
+            var val = props[prop];
+
+            // 特殊标记: "self" 表示指向自身 (用于 window.top = window)
+            if (val === "self") {
+                target[prop] = target;
+                cloudEnv.print(`[inject] ${objName}.${prop} = [self]`);
+            } else {
+                target[prop] = val;
+                cloudEnv.print(`[inject] ${objName}.${prop} = ${val}`);
+            }
+        }
+    }
+
+    cloudEnv.print(`[inject] ✅ 配置注入完成`);
+};
 // 1.定义Window对象
 var Window = function Window() {
     throw new Error("Illegal Constructor");
-}; cavernEnv.protect(Window);
-var window = this; cavernEnv.protect(window);
+}; cloudEnv.protect(Window);
+var window = this; cloudEnv.protect(window);
 
 // 2.定义Window的Symbol.ToStringTag
 Object.defineProperties(Window.prototype, {
@@ -126,18 +168,32 @@ Object.defineProperties(Window.prototype, {
     }
 })
 
+// 3.定义Window的属性
+//////////////////////
+//////////////////////
+
 // 4.定义原型链
 window.__proto__ = Window.prototype;
 
 // 5.代理Window的属性
-Window = cavernEnv.proxy(Window);
-window = cavernEnv.proxy(window);
+Window = cloudEnv.proxy(Window);
+window = cloudEnv.proxy(window);
+document = cloudEnv.proxy({});
 
-window.top = window;
-window.parent = window;
-window.self = window;
-window = cavernEnv.proxy(window);
-document = cavernEnv.proxy({});
+// target/ouyeel.config.js
+// 欧冶云商 目标网站专有配置
+
+var cloudEnv_target_config = {
+    window: {
+        top: "self",
+        self: "self",
+        parent: "self",
+        $_ts: {},
+    }
+};
+
+// 注入配置
+cloudEnv.inject(cloudEnv_target_config);
 // Dynamic injected content
 $_ts = window['$_ts']; if (!$_ts) $_ts = {}; $_ts.nsd = 10549; $_ts.cd = "qtqdrpAloP3DkPEkcaqbrc3mkf3hqc3kxGqlmG7qxG3LDrVdEaGlEG7qhqVbqGgKxGliEGEbrqgPrAlqtrGxcaqbrP3okf3br1WkrrGhqc3qxGlimP3lkPEmqAqbqP3kkf3bqcWtrrabqAAPqP3orAGhqc3mxGEimG7ttrGhxGAbrsqOcaAMcaqbkc3okf3hqc3mxGEimG7qxGLbqAgKxG3OxFErJOlcrslTLPW5WPsNbSLI0O5GsVUUfgu6OOOMvrlsl0C4i0xAGL4JBGqlWaQoqFW7qZxRIcVu9T2YUYmuH6obMVw1UYwzJIwVJKpkxsTFuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzObTTFKyFtnipJVxdFs35JIfvQllTF9fEaTxaFK2CxsByMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6ihCyaMbzFh3q6hb2XY2TLaVN6YYmLpKO.32ECsCeqEyf3MvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBhDz6FCzQOPlTQKwLWkOlA2xdp0mhw7whQOpvACrqGk2MF6w.Fn6WwbSNhb2nMQgBMvrXFnzBTCe7tKSnFC6dhnEZMC2dY82jQsRiVbrR0CATtuJawKu2EsN8Mox.M3yzwK2XtC20ubZ7F6w.Fn6WwbSNhb2nMQy8hcwqFsmcb0Q03K25W0U6JTxwM92eAHxlEOeRFUxzuPeXQDy.tCdUMCaNMox.M3yzwK2XtC20ubewt1rmw9.jMCEaplYNpwG4RbTxFCVnSmJfxufQFUsiMnS.wCz.hQSCMD9XFUxzuPeXQDy.tCdUMCS3hPYlQQfhs2YMs2fLuKpVAOJBpVUMKKmlEkTQMewBMc27QbzzObTTFKg.FUsiMnS.wCz.hQSCMD2ItnYhgmJLQKpEWVnWpbpeFsrGRzmyMDRkxsTFuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzObTTFKyFtnHN1vrZwV2nW8eSMDfGQ6RkyKrFMsJDxsByMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6ihCyaMbzFh3rK1YrBskxHakpTwmrkWbH.sUQ6sVzCEyf3MvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBhDz6FCzQOPmXpkr6YChgiv2nhoqupwR2VTw4QDzqGk2MU292K14qwv2GQcNNRLTSRURzQvYPSnSv3oRx3vMBRvJC3CrPA7TCMvlGt6JuTCRwtY92K14JMC2uRnN9FQJ6hCpbFbyBOUmBFbZL3DsKAU2WRPV.wwrCRYGXUcYIOKruMDYNx16KQUYGUTL.MewBMc27QbzzObTTFKg.FUsiMnS.wCz.UEgfQmNi1veoeTLnM6zkIYIAKOJCiCYIAEqyKCz6FC7zuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzdnZPQKfCIUvUpCpjWKpDJQ70FDrhV2Yn0nl_UbSnFCCiMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6iUPav8bJqYBxARbwT19aC2upWQlfSMTHjQPEdKK2nMQgBMvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBUUGXFUxzu2gtrwfXICHf3YJliOSWJWSWK9263uSO46wKVlwqpO.g3KRbVOpSiR2X1CeKWmyX2OfVJK9CFOoUJ9mOVlEZwZRlRbmDRsxpZ0aTHONWVlIxRlmzR2eU8x2xMoxGMTwvasruQKqNWsFYWblnJP2zQN2F3OQaQYTHC9y9JU3NWsFYWblnJP2zQN29s6rD30xzamJmY0WZR2UqpvNJY6mcR5S7i6V0WvRWgD3nsopfJkjMKY2x3YR8Kwm_3VE7WsqC9CE6W1Szwk..MC7eV0YAFdJP8DW7WsqC9CE6W1SzwqDPqalTqG3TqMm.womnwk0y9sL6HsL6Jsi3JuACqGlSJNVn3sEcrklC2aWtJkEdJkcYiOqSJGQkJRE_JGV1SGWe0ILlHdyLP5hgcB5TqAQUvZq5clCvjJqqqqqqqqqqqqDc24prXd9wuVc61yD0xg.dw9TN20NdGs48F8RzN3O38JGkcsq4JsWy2sAaWaEDJaDLWOQnWkVdJNqTJGVN3Kp62bTDM6NftVkUKUwfMTTAQ5mtpbzSW6TW4bTh1DpJVmcKsY2awOmJsFEkqqACra3SLGE6rAEoraDbUcpBwGQkULRQQqVDKcJ2ZqWlKPR9FADGWkQmqkWdqFWu"; if ($_ts.lcd) $_ts.lcd();
 
@@ -155,4 +211,3 @@ $_ts = window['$_ts']; if (!$_ts) $_ts = {}; $_ts.nsd = 10549; $_ts.cd = "qtqdrp
         }
     }
 })([], [[1, 2, 10, 3, 11, 0, 4, 9, 6, 8, 7, 5,], [19, 50, 42, 0, 56, 82, 84, 69, 85, 4, 62, 33, 72, 70, 55, 88, 49, 18, 11, 71, 15, 27, 9, 3, 81, 25, 51, 66, 65, 53, 78, 2, 32, 87, 80, 24, 8, 63, 16, 29, 68, 20, 86, 20, 52, 77, 47, 37, 6, 4, 36, 40, 43, 30, 91, 93, 67, 83, 12, 31, 13, 48, 22, 79, 1, 14, 34, 67, 83, 12, 54, 46, 5, 48, 59, 74, 64, 92, 23, 61, 41, 7, 45, 67, 58, 26, 90, 10, 35, 75, 76, 28, 89, 20, 73, 90, 20, 39, 17, 60, 44, 21, 38, 57, 20,], [23, 38, 52, 30, 22, 49, 32, 37, 40, 55, 47, 53, 29, 12, 10, 33, 26, 27, 28, 36, 7, 13, 47, 17, 29, 6, 41, 33, 11, 43, 2, 16, 21, 0, 47, 58, 29, 51, 10, 33, 44, 56, 8, 50, 24, 34, 24, 5, 20, 48, 23, 1, 57, 14, 54, 39, 15, 42, 24, 19, 59, 9, 45, 3, 31, 35, 25, 46, 4, 18, 24,], [28, 33, 22, 27, 30, 40, 26, 38, 0, 6, 36, 21, 10, 31, 2, 11, 7, 4, 41, 35, 5, 27, 42, 14, 29, 23, 3, 12, 20, 13, 1, 6, 8, 19, 34, 17, 32, 9, 16, 18, 39, 24, 37, 34, 15, 25,],]);
-

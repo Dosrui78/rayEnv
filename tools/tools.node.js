@@ -8,8 +8,9 @@ function getCode() {
     const printCode = fs.readFileSync(`${__dirname}/print.js`, 'utf-8');
     const proxyCode = fs.readFileSync(`${__dirname}/proxy.js`, 'utf-8');
     const safetyCode = fs.readFileSync(`${__dirname}/safety.js`, 'utf-8');
+    const injectCode = fs.readFileSync(`${__dirname}/inject.js`, 'utf-8');
 
-    return configCode + "\r\n" + printCode + "\r\n" + proxyCode + "\r\n" + safetyCode;
+    return configCode + "\r\n" + printCode + "\r\n" + proxyCode + "\r\n" + safetyCode + "\r\n" + injectCode;
 }
 
 

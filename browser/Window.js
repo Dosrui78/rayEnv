@@ -12,14 +12,13 @@ Object.defineProperties(Window.prototype, {
     }
 })
 
+// 3.定义Window的属性
+//////////////////////
+//////////////////////
+
 // 4.定义原型链
 window.__proto__ = Window.prototype;
 
 // 5.代理Window的属性
 Window = rayEnv.proxy(Window);
-window = rayEnv.proxy(window);
-
-window.top = window;
-window.parent = window;
-window.self = window;
 window = rayEnv.proxy(window);
