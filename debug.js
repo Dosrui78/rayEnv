@@ -1,22 +1,22 @@
 // tools/config.js
 // 框架全局配置与内存管理
 
-// 初始化全局对象 cloudEnv
-var cloudEnv = {};
+// 初始化全局对象 mountainEnv
+var mountainEnv = {};
 
 // 网站控制
-cloudEnv.target = [
+mountainEnv.target = [
     "ouyeel"
 ];
 
 // 框架开关控制
-cloudEnv.button = {
+mountainEnv.button = {
     proxy: true,   // 是否开启 Proxy 代理监控
     print: true,   // 是否开启日志打印
 };
 
 // 框架内部内存，用于存储环境状态
-cloudEnv.memory = {
+mountainEnv.memory = {
     logs: [],      // 日志记录
     listeners: {}, // 事件监听器缓存
     htmlelements: {}, // DOM 元素工厂映射
@@ -32,22 +32,22 @@ cloudEnv.memory = {
 
 // tools/print.js
 // 日志打印工具
-cloudEnv.print = function (msg) {
-    if (cloudEnv.button.print) {
+mountainEnv.print = function (msg) {
+    if (mountainEnv.button.print) {
         console.log(msg);
-        cloudEnv.memory.logs.push(msg);
+        mountainEnv.memory.logs.push(msg);
     }
 };
 
-cloudEnv.printAll = function () {
-    console.table(cloudEnv.memory.logs);
+mountainEnv.printAll = function () {
+    console.table(mountainEnv.memory.logs);
 };
 
 // tools/proxy.js
 // Proxy 代理监控模块
 
-cloudEnv.proxy = function (obj) {
-    if (!cloudEnv.button.proxy) return obj;
+mountainEnv.proxy = function (obj) {
+    if (!mountainEnv.button.proxy) return obj;
 
     return new Proxy(obj, {
         get(target, property, receiver) {
@@ -55,9 +55,9 @@ cloudEnv.proxy = function (obj) {
 
             const value = target[property];
 
-            if (cloudEnv.button.print) {
+            if (mountainEnv.button.print) {
                 const targetName = Object.prototype.toString.call(target);
-                cloudEnv.print(`[get] <= target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
+                mountainEnv.print(`[get] <= target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
             }
 
             // 自动检测漏补环境
@@ -69,9 +69,9 @@ cloudEnv.proxy = function (obj) {
             return value;
         },
         set(target, property, value, receiver) {
-            if (cloudEnv.button.print) {
+            if (mountainEnv.button.print) {
                 const targetName = Object.prototype.toString.call(target);
-                cloudEnv.print(`[set] => target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
+                mountainEnv.print(`[set] => target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
             }
             return Reflect.set(target, property, value);
         }
@@ -108,7 +108,7 @@ const setObj = function setObj(obj, prop, val) {
     setObj(newToString, symbol, `function toString() { [native code] }`);
 
     // 保护函数：使其 toString 返回 [native code]
-    cloudEnv.protect = function (func) {
+    mountainEnv.protect = function (func) {
         Object.defineProperty(func, symbol, {
             value: `function ${func.name || ""}() { [native code] }`,
             enumerable: false,
@@ -121,7 +121,7 @@ const setObj = function setObj(obj, prop, val) {
 // tools/inject.js
 // 配置注入模块：将目标网站配置注入到对应全局对象
 
-cloudEnv.inject = function (config) {
+mountainEnv.inject = function (config) {
     if (!config) return;
 
     for (var objName in config) {
@@ -134,7 +134,7 @@ cloudEnv.inject = function (config) {
             // 全局对象不存在，创建一个空对象并挂到全局
             target = {};
             eval(objName + " = target");
-            cloudEnv.print(`[inject] 🆕 创建全局对象: ${objName}`);
+            mountainEnv.print(`[inject] 🆕 创建全局对象: ${objName}`);
         }
 
         var props = config[objName];
@@ -144,21 +144,27 @@ cloudEnv.inject = function (config) {
             // 特殊标记: "self" 表示指向自身 (用于 window.top = window)
             if (val === "self") {
                 target[prop] = target;
-                cloudEnv.print(`[inject] ${objName}.${prop} = [self]`);
+                mountainEnv.print(`[inject] ${objName}.${prop} = [self]`);
             } else {
+                // 如果是函数，先保护再注入，防止 toString 被检测
+                if (typeof val === "function") {
+                    mountainEnv.protect(val);
+                    mountainEnv.print(`[inject] ${objName}.${prop} = [protected function]`);
+                } else {
+                    mountainEnv.print(`[inject] ${objName}.${prop} = ${val}`);
+                }
                 target[prop] = val;
-                cloudEnv.print(`[inject] ${objName}.${prop} = ${val}`);
             }
         }
     }
 
-    cloudEnv.print(`[inject] ✅ 配置注入完成`);
+    mountainEnv.print(`[inject] ✅ 配置注入完成`);
 };
 // 1.定义Window对象
 var Window = function Window() {
     throw new Error("Illegal Constructor");
-}; cloudEnv.protect(Window);
-var window = this; cloudEnv.protect(window);
+}; mountainEnv.protect(Window);
+var window = this; mountainEnv.protect(window);
 
 // 2.定义Window的Symbol.ToStringTag
 Object.defineProperties(Window.prototype, {
@@ -169,31 +175,70 @@ Object.defineProperties(Window.prototype, {
 })
 
 // 3.定义Window的属性
-//////////////////////
-//////////////////////
+//////////////////////////////////////////////
+//////////////////////////////////////////////
 
 // 4.定义原型链
 window.__proto__ = Window.prototype;
 
 // 5.代理Window的属性
-Window = cloudEnv.proxy(Window);
-window = cloudEnv.proxy(window);
-document = cloudEnv.proxy({});
+Window = mountainEnv.proxy(Window);
+window = mountainEnv.proxy(window);
+// 1.定义Document对象
+var Document = function Document() {
+}; mountainEnv.protect(Document);
+var document = {}; mountainEnv.protect(document);
+
+// 2.定义Document的Symbol.ToStringTag
+Object.defineProperties(Document.prototype, {
+    [Symbol.toStringTag]: {
+        value: "Document",
+        configurable: true,
+    }
+})
+
+// 3.定义Document的属性
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+
+
+// 4.定义原型链
+document.__proto__ = Document.prototype;
+
+// 5.代理Document的属性
+Document = damnEnv.proxy(Document);
+document = damnEnv.proxy(document);
+location = mountainEnv.proxy({});
 
 // target/ouyeel.config.js
 // 欧冶云商 目标网站专有配置
 
-var cloudEnv_target_config = {
+var mountainEnv_target_config = {
     window: {
         top: "self",
         self: "self",
         parent: "self",
         $_ts: {},
-    }
+        execScript: undefined,
+        setTimeout: function() {},
+        setInterval: function() {},
+        clearInterval: function() {},
+    },
+    location: {
+        href: "https://www.ouyeel.com/steel/search?pageIndex=1&pageSize=50",
+        protocol: "https:",
+        host: "www.ouyeel.com",
+        hostname: "www.ouyeel.com",
+        port: "",
+        pathname: "/steel/search",
+        search: "?pageIndex=1&pageSize=50",
+        hash: "",
+        origin: "https://www.ouyeel.com",
+    },
 };
 
 // 注入配置
-cloudEnv.inject(cloudEnv_target_config);
+mountainEnv.inject(mountainEnv_target_config);
 // Dynamic injected content
 $_ts = window['$_ts']; if (!$_ts) $_ts = {}; $_ts.nsd = 10549; $_ts.cd = "qtqdrpAloP3DkPEkcaqbrc3mkf3hqc3kxGqlmG7qxG3LDrVdEaGlEG7qhqVbqGgKxGliEGEbrqgPrAlqtrGxcaqbrP3okf3br1WkrrGhqc3qxGlimP3lkPEmqAqbqP3kkf3bqcWtrrabqAAPqP3orAGhqc3mxGEimG7ttrGhxGAbrsqOcaAMcaqbkc3okf3hqc3mxGEimG7qxGLbqAgKxG3OxFErJOlcrslTLPW5WPsNbSLI0O5GsVUUfgu6OOOMvrlsl0C4i0xAGL4JBGqlWaQoqFW7qZxRIcVu9T2YUYmuH6obMVw1UYwzJIwVJKpkxsTFuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzObTTFKyFtnipJVxdFs35JIfvQllTF9fEaTxaFK2CxsByMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6ihCyaMbzFh3q6hb2XY2TLaVN6YYmLpKO.32ECsCeqEyf3MvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBhDz6FCzQOPlTQKwLWkOlA2xdp0mhw7whQOpvACrqGk2MF6w.Fn6WwbSNhb2nMQgBMvrXFnzBTCe7tKSnFC6dhnEZMC2dY82jQsRiVbrR0CATtuJawKu2EsN8Mox.M3yzwK2XtC20ubZ7F6w.Fn6WwbSNhb2nMQy8hcwqFsmcb0Q03K25W0U6JTxwM92eAHxlEOeRFUxzuPeXQDy.tCdUMCaNMox.M3yzwK2XtC20ubewt1rmw9.jMCEaplYNpwG4RbTxFCVnSmJfxufQFUsiMnS.wCz.hQSCMD9XFUxzuPeXQDy.tCdUMCS3hPYlQQfhs2YMs2fLuKpVAOJBpVUMKKmlEkTQMewBMc27QbzzObTTFKg.FUsiMnS.wCz.hQSCMD2ItnYhgmJLQKpEWVnWpbpeFsrGRzmyMDRkxsTFuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzObTTFKyFtnHN1vrZwV2nW8eSMDfGQ6RkyKrFMsJDxsByMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6ihCyaMbzFh3rK1YrBskxHakpTwmrkWbH.sUQ6sVzCEyf3MvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBhDz6FCzQOPmXpkr6YChgiv2nhoqupwR2VTw4QDzqGk2MU292K14qwv2GQcNNRLTSRURzQvYPSnSv3oRx3vMBRvJC3CrPA7TCMvlGt6JuTCRwtY92K14JMC2uRnN9FQJ6hCpbFbyBOUmBFbZL3DsKAU2WRPV.wwrCRYGXUcYIOKruMDYNx16KQUYGUTL.MewBMc27QbzzObTTFKg.FUsiMnS.wCz.UEgfQmNi1veoeTLnM6zkIYIAKOJCiCYIAEqyKCz6FC7zuoR7F1yNQb6ihCyaMb7.MewBMc27QbzzdnZPQKfCIUvUpCpjWKpDJQ70FDrhV2Yn0nl_UbSnFCCiMUYNMPzNwWyBhDz6FC7zuoR7F1yNQb6iUPav8bJqYBxARbwT19aC2upWQlfSMTHjQPEdKK2nMQgBMvrXFnzBTCe7tKSnFCCiMUYNMPzNwWyBUUGXFUxzu2gtrwfXICHf3YJliOSWJWSWK9263uSO46wKVlwqpO.g3KRbVOpSiR2X1CeKWmyX2OfVJK9CFOoUJ9mOVlEZwZRlRbmDRsxpZ0aTHONWVlIxRlmzR2eU8x2xMoxGMTwvasruQKqNWsFYWblnJP2zQN2F3OQaQYTHC9y9JU3NWsFYWblnJP2zQN29s6rD30xzamJmY0WZR2UqpvNJY6mcR5S7i6V0WvRWgD3nsopfJkjMKY2x3YR8Kwm_3VE7WsqC9CE6W1Szwk..MC7eV0YAFdJP8DW7WsqC9CE6W1SzwqDPqalTqG3TqMm.womnwk0y9sL6HsL6Jsi3JuACqGlSJNVn3sEcrklC2aWtJkEdJkcYiOqSJGQkJRE_JGV1SGWe0ILlHdyLP5hgcB5TqAQUvZq5clCvjJqqqqqqqqqqqqDc24prXd9wuVc61yD0xg.dw9TN20NdGs48F8RzN3O38JGkcsq4JsWy2sAaWaEDJaDLWOQnWkVdJNqTJGVN3Kp62bTDM6NftVkUKUwfMTTAQ5mtpbzSW6TW4bTh1DpJVmcKsY2awOmJsFEkqqACra3SLGE6rAEoraDbUcpBwGQkULRQQqVDKcJ2ZqWlKPR9FADGWkQmqkWdqFWu"; if ($_ts.lcd) $_ts.lcd();
 

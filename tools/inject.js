@@ -26,8 +26,14 @@ rayEnv.inject = function (config) {
                 target[prop] = target;
                 rayEnv.print(`[inject] ${objName}.${prop} = [self]`);
             } else {
+                // 如果是函数，先保护再注入，防止 toString 被检测
+                if (typeof val === "function") {
+                    rayEnv.protect(val);
+                    rayEnv.print(`[inject] ${objName}.${prop} = [protected function]`);
+                } else {
+                    rayEnv.print(`[inject] ${objName}.${prop} = ${val}`);
+                }
                 target[prop] = val;
-                rayEnv.print(`[inject] ${objName}.${prop} = ${val}`);
             }
         }
     }

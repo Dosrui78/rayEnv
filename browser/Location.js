@@ -1,0 +1,1 @@
+location = rayEnv.proxy({});
