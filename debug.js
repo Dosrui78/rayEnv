@@ -206,8 +206,8 @@ Object.defineProperties(Document.prototype, {
 document.__proto__ = Document.prototype;
 
 // 5.代理Document的属性
-Document = damnEnv.proxy(Document);
-document = damnEnv.proxy(document);
+Document = rayEnv.proxy(Document);
+document = rayEnv.proxy(document);
 location = mountainEnv.proxy({});
 
 // target/ouyeel.config.js
