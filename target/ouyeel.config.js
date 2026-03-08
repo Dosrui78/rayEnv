@@ -1,6 +1,6 @@
 // target/ouyeel.config.js
 // 欧冶云商 目标网站专有配置
-var div = {};
+var _div = rayEnv.proxy({});
 var meta_content = "CsZ1Wi7z1dSOCPCYEJJUBtB0g0IURYzge8E.XI0XvjDVfJHRZOutMG"
 var rayEnv_target_config = {
     window: {
@@ -29,9 +29,9 @@ var rayEnv_target_config = {
     },
     document: {
         createElement: function createElement(ele) {
-            rayEnv.print("document createElement", ele);
-            if (ele == "div") {
-                return div;
+            rayEnv.print(`document createElement ${ele}`);
+            if (ele === "div") {
+                return _div;
             }
             else {
                 return {};
@@ -43,8 +43,14 @@ var rayEnv_target_config = {
         removeChild: function removeChild() {
 
         },
-        getElementsByTagName: function getElementsByTagName() {
-            
+        getElementsByTagName: function getElementsByTagName(tag) {
+            rayEnv.print(`document getElementsByTagName ${tag}`);
+            if (tag === "i") {
+                return [];
+            }
+            else {
+                return [];
+            }
         }
     }
 };
