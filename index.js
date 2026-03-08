@@ -14,7 +14,7 @@ const vm = new VM();
 // 读取工具代码 (config + print + proxy + safety + inject)
 var configCode = require(`${__dirname}/tools/tools.node.js`).getCode();
 
-// 读取浏览器环境代码 (Window + Document)
+// 读取浏览器环境代码
 var browserCode = require(`${__dirname}/browser/rayEnv.node.js`).getCode();
 
 // 获取目标代码
@@ -27,6 +27,7 @@ let targetConfigCode = "\r\n" + fs.readFileSync(targetConfigPath, 'utf-8');
 
 // 拼接顺序: 工具 → 浏览器环境 → 目标配置 → 目标脚本
 const code = configCode + browserCode + targetConfigCode + targetCode;
+
 
 // 更改变量名称
 const modifiedCode = code.replace(/rayEnv/g, randomName + "Env");
