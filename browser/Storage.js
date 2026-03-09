@@ -16,7 +16,7 @@ Object.defineProperties(Storage.prototype, {
 //////////////////////////////////////////////
 Storage.prototype.getItem = function getItem(key) {
     return this[key];
-}; rayEnv_target_config
+}; rayEnv.protect(Storage.prototype.getItem);
 Storage.prototype.setItem = function setItem(key, value) {
     this[key] = value;
 }; rayEnv.protect(Storage.prototype.setItem);
