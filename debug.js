@@ -1,22 +1,22 @@
 // tools/config.js
 // 框架全局配置与内存管理
 
-// 初始化全局对象 snowEnv
-var snowEnv = {};
+// 初始化全局对象 eveningEnv
+var eveningEnv = {};
 
 // 网站控制
-snowEnv.target = [
+eveningEnv.target = [
     "ouyeel"
 ];
 
 // 框架开关控制
-snowEnv.button = {
+eveningEnv.button = {
     proxy: true,   // 是否开启 Proxy 代理监控
     print: true,   // 是否开启日志打印
 };
 
 // 框架内部内存，用于存储环境状态
-snowEnv.memory = {
+eveningEnv.memory = {
     logs: [],      // 日志记录
     listeners: {}, // 事件监听器缓存
     htmlelements: {}, // DOM 元素工厂映射
@@ -32,22 +32,22 @@ snowEnv.memory = {
 
 // tools/print.js
 // 日志打印工具
-snowEnv.print = function (msg) {
-    if (snowEnv.button.print) {
+eveningEnv.print = function (msg) {
+    if (eveningEnv.button.print) {
         console.log(msg);
-        snowEnv.memory.logs.push(msg);
+        eveningEnv.memory.logs.push(msg);
     }
 };
 
-snowEnv.printAll = function () {
-    console.table(snowEnv.memory.logs);
+eveningEnv.printAll = function () {
+    console.table(eveningEnv.memory.logs);
 };
 
 // tools/proxy.js
 // Proxy 代理监控模块
 
-snowEnv.proxy = function (obj) {
-    if (!snowEnv.button.proxy) return obj;
+eveningEnv.proxy = function (obj) {
+    if (!eveningEnv.button.proxy) return obj;
 
     return new Proxy(obj, {
         get(target, property, receiver) {
@@ -55,9 +55,9 @@ snowEnv.proxy = function (obj) {
 
             const value = target[property];
 
-            if (snowEnv.button.print) {
+            if (eveningEnv.button.print) {
                 const targetName = Object.prototype.toString.call(target);
-                snowEnv.print(`[get] <= target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
+                eveningEnv.print(`[get] <= target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
             }
 
             // 自动检测漏补环境
@@ -69,9 +69,9 @@ snowEnv.proxy = function (obj) {
             return value;
         },
         set(target, property, value, receiver) {
-            if (snowEnv.button.print) {
+            if (eveningEnv.button.print) {
                 const targetName = Object.prototype.toString.call(target);
-                snowEnv.print(`[set] => target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
+                eveningEnv.print(`[set] => target: ${targetName}, prop: ${property.toString()}, value: ${value}`);
             }
             return Reflect.set(target, property, value);
         }
@@ -108,7 +108,7 @@ const setObj = function setObj(obj, prop, val) {
     setObj(newToString, symbol, `function toString() { [native code] }`);
 
     // 保护函数：使其 toString 返回 [native code]
-    snowEnv.protect = function (func) {
+    eveningEnv.protect = function (func) {
         Object.defineProperty(func, symbol, {
             value: `function ${func.name || ""}() { [native code] }`,
             enumerable: false,
@@ -121,7 +121,7 @@ const setObj = function setObj(obj, prop, val) {
 // tools/inject.js
 // 配置注入模块：将目标网站配置注入到对应全局对象
 
-snowEnv.inject = function (config) {
+eveningEnv.inject = function (config) {
     if (!config) return;
 
     for (var objName in config) {
@@ -134,7 +134,7 @@ snowEnv.inject = function (config) {
             // 全局对象不存在，创建一个空对象并挂到全局
             target = {};
             eval(objName + " = target");
-            snowEnv.print(`[inject] 🆕 创建全局对象: ${objName}`);
+            eveningEnv.print(`[inject] 🆕 创建全局对象: ${objName}`);
         }
 
         var props = config[objName];
@@ -144,27 +144,27 @@ snowEnv.inject = function (config) {
             // 特殊标记: "self" 表示指向自身 (用于 window.top = window)
             if (val === "self") {
                 target[prop] = target;
-                snowEnv.print(`[inject] ${objName}.${prop} = [self]`);
+                eveningEnv.print(`[inject] ${objName}.${prop} = [self]`);
             } else {
                 // 如果是函数，先保护再注入，防止 toString 被检测
                 if (typeof val === "function") {
-                    snowEnv.protect(val);
-                    snowEnv.print(`[inject] ${objName}.${prop} = [protected function]`);
+                    eveningEnv.protect(val);
+                    eveningEnv.print(`[inject] ${objName}.${prop} = [protected function]`);
                 } else {
-                    snowEnv.print(`[inject] ${objName}.${prop} = ${val}`);
+                    eveningEnv.print(`[inject] ${objName}.${prop} = ${val}`);
                 }
                 target[prop] = val;
             }
         }
     }
 
-    snowEnv.print(`[inject] ✅ 配置注入完成`);
+    eveningEnv.print(`[inject] ✅ 配置注入完成`);
 };
 // 1.定义Window对象
 var Window = function Window() {
     throw new Error("Illegal Constructor");
-}; snowEnv.protect(Window);
-var window = this; snowEnv.protect(window);
+}; eveningEnv.protect(Window);
+var window = this; eveningEnv.protect(window);
 
 // 2.定义Window的Symbol.ToStringTag
 Object.defineProperties(Window.prototype, {
@@ -182,12 +182,12 @@ Object.defineProperties(Window.prototype, {
 window.__proto__ = Window.prototype;
 
 // 5.代理Window的属性
-Window = snowEnv.proxy(Window);
-window = snowEnv.proxy(window);
+Window = eveningEnv.proxy(Window);
+window = eveningEnv.proxy(window);
 // 1.定义Document对象
 var Document = function Document() {
-}; snowEnv.protect(Document);
-var document = {}; snowEnv.protect(document);
+}; eveningEnv.protect(Document);
+var document = {}; eveningEnv.protect(document);
 
 // 2.定义Document的Symbol.ToStringTag
 Object.defineProperties(Document.prototype, {
@@ -206,12 +206,12 @@ Object.defineProperties(Document.prototype, {
 document.__proto__ = Document.prototype;
 
 // 5.代理Document的属性
-Document = snowEnv.proxy(Document);
-document = snowEnv.proxy(document);
+Document = eveningEnv.proxy(Document);
+document = eveningEnv.proxy(document);
 // 1.定义Location对象
 var Location = function Location() {
-}; snowEnv.protect(Location);
-var location = {}; snowEnv.protect(location);
+}; eveningEnv.protect(Location);
+var location = {}; eveningEnv.protect(location);
 
 // 2.定义Location的Symbol.ToStringTag
 Object.defineProperties(Location.prototype, {
@@ -238,13 +238,38 @@ Object.defineProperty(location, "protocol", {
 location.__proto__ = Location.prototype;
 
 // 5.代理Document的属性
-Location = snowEnv.proxy(Location);
-location = snowEnv.proxy(location);
+Location = eveningEnv.proxy(Location);
+location = eveningEnv.proxy(location);
+// 1.定义Navigator对象
+var Navigator = function Navigator() {
+}; eveningEnv.protect(Navigator);
+var navigator = {}; eveningEnv.protect(navigator);
+
+// 2.定义Navigator的Symbol.ToStringTag
+Object.defineProperties(Navigator.prototype, {
+    [Symbol.toStringTag]: {
+        value: "Navigator",
+        configurable: true,
+    }
+})
+
+// 3.定义Navigator的属性
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+
+
+// 4.定义原型链
+navigator.__proto__ = Navigator.prototype;
+
+// 5.代理Navigator的属性
+Navigator = eveningEnv.proxy(Navigator);
+navigator = eveningEnv.proxy(navigator);
+
 // 1.定义Storage对象
 var Storage = function Storage() {
-}; snowEnv.protect(Storage);
-var localStorage = {}; snowEnv.protect(localStorage);
-var sessionStorage = {}; snowEnv.protect(sessionStorage);
+}; eveningEnv.protect(Storage);
+var localStorage = {}; eveningEnv.protect(localStorage);
+var sessionStorage = {}; eveningEnv.protect(sessionStorage);
 
 // 2.定义Storage的Symbol.ToStringTag
 Object.defineProperties(Storage.prototype, {
@@ -258,21 +283,21 @@ Object.defineProperties(Storage.prototype, {
 //////////////////////////////////////////////
 Storage.prototype.getItem = function getItem(key) {
     return this[key];
-}; snowEnv_target_config
+}; eveningEnv.protect(Storage.prototype.getItem);
 Storage.prototype.setItem = function setItem(key, value) {
     this[key] = value;
-}; snowEnv.protect(Storage.prototype.setItem);
+}; eveningEnv.protect(Storage.prototype.setItem);
 Storage.prototype.removeItem = function removeItem(key) {
     delete this[key];
-}; snowEnv.protect(Storage.prototype.removeItem);
+}; eveningEnv.protect(Storage.prototype.removeItem);
 Storage.prototype.clear = function clear() {
     for (var key in Object.keys(this)) {
         delete this[key];
     }
-}; snowEnv.protect(Storage.prototype.clear);
+}; eveningEnv.protect(Storage.prototype.clear);
 Storage.prototype.key = function key(index) {
     return Object.keys(this)[index];
-}; snowEnv.protect(Storage.prototype.key);
+}; eveningEnv.protect(Storage.prototype.key);
 Storage.prototype.__defineGetter__("length", function length() {
     debugger;
     return Object.keys(this).length;
@@ -285,63 +310,34 @@ localStorage.__proto__ = Storage.prototype;
 sessionStorage.__proto__ = Storage.prototype;
 
 // 5.代理Storage的属性
-Storage = snowEnv.proxy(Storage);
-localStorage = snowEnv.proxy(localStorage);
-sessionStorage = snowEnv.proxy(sessionStorage);
+Storage = eveningEnv.proxy(Storage);
+localStorage = eveningEnv.proxy(localStorage);
+sessionStorage = eveningEnv.proxy(sessionStorage);
 
 // target/ouyeel.config.js
 // 欧冶云商 目标网站专有配置
-var div = {};
-var meta_content = "CsZ1Wi7z1dSOCPCYEJJUBtB0g0IURYzge8E.XI0XvjDVfJHRZOutMG"
-var snowEnv_target_config = {
+var meta_content = "CsZ1Wi7z1dSOCPCYEJJUBtB0g0IURYzge8E.XI0XvjDVfJHRZOutMG";
+
+var eveningEnv_target_config = {
     window: {
         top: "self",
         self: "self",
-        parent: "self",
-        $_ts: {},
-        execScript: undefined,
-        ActiveXObject: undefined,
-        CollectGarbage: undefined,
-        setTimeout: function () { },
-        setInterval: function () { },
-        clearInterval: function () { },
-        DOMParser: function DOMParser() { }
-    },
-    location: {
-        href: "https://www.ouyeel.com/steel/search?pageIndex=1&pageSize=50",
-        protocol: "https:",
-        host: "www.ouyeel.com",
-        hostname: "www.ouyeel.com",
-        port: "",
-        pathname: "/steel/search",
-        search: "?pageIndex=1&pageSize=50",
-        hash: "",
-        origin: "https://www.ouyeel.com",
-    },
-    document: {
-        createElement: function createElement(ele) {
-            snowEnv.print("document createElement", ele);
-            if (ele == "div") {
-                return div;
-            }
-            else {
-                return {};
-            }
-        },
-        appendChild: function appendChild() {
-
-        },
-        removeChild: function removeChild() {
-
-        },
-        getElementsByTagName: function getElementsByTagName() {
-            
-        }
     }
 };
 
 // 注入配置
-snowEnv.inject(snowEnv_target_config);
+eveningEnv.inject(eveningEnv_target_config);
+
+// 保护
+eveningEnv.protect(window["eval"]);
+
+for (let key in eveningEnv_target_config) {
+    for (let prop in eveningEnv_target_config[key]) {
+        if (typeof eveningEnv_target_config[key][prop] === "function") {
+            eveningEnv.protect(eveningEnv_target_config[key][prop]);
+        }
+    }
+}
 // Dynamic injected content
 $_ts=window['$_ts'];if(!$_ts)$_ts={};$_ts.nsd=56799;$_ts.cd="qWqdrpAlEa7qxGEbqagKcaqbq13Dkf3brAg7qP3qkPEmcaqbrPG3msZOrGAnxGVmcq7qxGWbqqgKcagbrP3okf3hqc3mxGEimG7ixGqbqAgKcaqLDq9hqc3DxfGYHnWxrr0bqGgPqa7qxGgbqAgKcaqbrn3lkf3bqag7rc3qEaLltq7qxGVbqGgKrAqbqc3rkf3hqc3oxGAimGVqtrGhcaqbrP3okf3br1WmrrVbqAgPqG7qxGQhrqgKxGWiEGAbqcW2vGlCWqEmWOK8EZCA92fDpvT0RywYKkGad7vA3l4QVXuEtdELxd7I5VW0qqAcraAq7AkoU692JOklY2fUwOe0pIrlYTz1MsrVnsRfp1qeUCd.MCaLMoxLMMxzwKfXtCN0ZbZ7Fvw.Fc6awbSLUn7bWjfr8bZuHOrM5vJlWCeEsKkHQCSBQnV5KBrCMDGXFUmzZPeXQKy.tDd.MCaLMoxLMMxzwKfXKPGOjPT7FmJwMKhUwmrUMVYz1HepW02jAc34SKTTFDg.FvsnMnSjwCzLhIrCMDGXFUmzZPeXQKy.K1CZJvpfMsqeReep89ml16J9TvlS3VRGp1i9KDySMb7LM5zBMcf7Qbfz7bTTFDg.FvsnMnSjwCzLUhEfiK27ITrte6Eu1mwGUokyJPgTwUYNp.ayKCN6FCGzZoR7FcyNQK6nhCySMb7LM5zBMcf7QbfzanZPpbaSpuOFJCpB8uJqYtNpKDfWIVYpC1l_UCSnFDCnMUYLMPzjwHxBhDN6FCGzZoR7FcyNQK6nUPabAoRH1IxfJVxqFVr4NbYLsCy2JCIi3PE5KK2SMIEBMvmXFnfB_Ce7tDSnFDCnMUYLMPzjwHxBU1GGpop.T9TAUVz3MK4yY0QTF9Yq8WpPA13gUDN0ZbZ7Fvw.Fc6awbSLhb2SMIEBMvmXFnfB_Ce7K1g2s9HiF6pPssmxhezv8DZT3DJnyDeOp1qeUCd.MCaLMoxLMMxzwKfXtCN0ZbZ7Fvw.Fc6awbSLUn7b1zwu8UJWQOpW4DezRvRCp9MeKKGTAnV5KBrCMDGXFUmzZPeXQKy.tDd.MCaLMoxLMMxzwKfXKPGOn0NYFV9n1biNwvmKpOxb1Jr0W9ziwP34SKTTFDg.FvsnMnSjwCzLhIrCMDGXFUmzZPeXQKy.K1CZMVlCQ2wvK_w_wnNTW0rT5mr1IUY.p1i9KmzIEm9.35z_RU3BFKWX4DRuF6wTRC1SRDYasDxusHzaQCY239wX_CT0xPyuwvs4UPSIEm9.MBxjwblBRDSG_PSf3DeXFP47MDeNhKrfwwS_1KqGt6ru_CRwtm92KP4eQD2OMcVLw8SCRY2ItCN0ZbZ7Fvw.Fc6awbSLhb2SMIEBMvmXFT9zBoJI1ledA2soWKNepvT1QZQaQuTGU0VONmfXQKy.tDd.MCaLMoxLMMxzwKfXtCN0ZbZ7Fvw.FmnnEUpXQ6TZwJNvMuwfpOrLjKz2sYwYw6cZiYzjwCzLhIrCMDGXFUmzZPeXQKy.tDd.MCaLMoxLMQWBEvSbAmJpuKYPQ0eWWu1Ns6YiwDeK18Zfi2e7Qbfz7bTTFDg.FvsnMnSjwCzLhIrCMDGXFUmzZ2yetDSnFD6kcAk8F6ebABSAAsayskmB0Y2WQK3ZR9ujYYYrpV3dKdS23TASQsa_Z0fjVkY8FuK2YurBWCL0wtzcR2RoHox2CKY9ADqnYmkpJO7Z1YrcFB2cFDrFY60_TDe6RbNU3btzQopbhkluJjePJuq7MUQ_SClnJvpw1vvsRurahkluJjePJuq7MUQ_5VSTADRcFDHip2xmiKRA3ezy1mm0AbxHZsfaWOwC1VH4WV2nRkAdiWpFsDwsU2SnyCxotOAaWukdJkAjFoAd1HxLimYqVDyAd6zbtOAaWukdJkAjFoAlqRgcWqAkJAA1evw0woleHktvJkGZWOVCi_L6WaAlWsWC.CE6rqlSWu18csl0iOATJjQuWkacquqSNuVqmWWkioxvru.gM3BvKyIZ7qQcmyFggdd1z.VbrR5wqaADrAWlEw3GRIuLUFzQKjTExAHh4Z6_S5t9p8Uz_Th0l4CNAVPsvGLCJOW6JuiBJkQlquQlc_Z0Ju34Wk3ajsqqrqEorqD8qOqlquqlqRgkqqrwECwHvGwIEDQarqUrxnpXqGJMxIe4qq3CJGAkjslqrsE";if($_ts.lcd)$_ts.lcd();
 
