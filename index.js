@@ -34,7 +34,7 @@ const modifiedCode = code.replace(/rayEnv/g, randomName + "Env");
 
 // 执行配置文件
 var script = new VMScript(modifiedCode, "debug.js");
-fs.writeFileSync(`${__dirname}/debug.js`, script.code);
+// fs.writeFileSync(`${__dirname}/debug.js`, script.code);
 try {
     vm.run(script);
 } catch (err) {
