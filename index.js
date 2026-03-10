@@ -30,7 +30,7 @@ const code = configCode + browserCode + targetConfigCode + targetCode;
 
 
 // 更改变量名称
-// const modifiedCode = code.replace(/rayEnv/g, randomName + "Env");
+const modifiedCode = code.replace(/rayEnv/g, randomName + "Env");
 
 // 执行配置文件
 var script = new VMScript(modifiedCode, "debug.js");
