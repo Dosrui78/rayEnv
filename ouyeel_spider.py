@@ -58,61 +58,24 @@ def fetch_web_params():
     
     return meta_content, ts_js, auto_script_js
 
-def call_node_env(meta_content, ts_js, auto_script_js):
+def call_node_server(meta_content, ts_js, auto_script_js):
     """
-    调用 Node.js 环境生成 cookie。
-    我们将 meta_content 等写入 dynamic_config.json 或传参。
-    在这里我们选择写入文件，让 index.js 读取。
+    Calls the Node.js HTTP server to generate the cookie.
     """
-    # 1. 更新 target/ouyeel.js (通常需要手动处理或注入，这里简化 index.js 会自动读取)
-    # 本方案中，我们需要把 ts_js 和 auto_script_js 拼接到执行的代码里
-    # 这里的关键是：Node 端需要执行 ts_js + auto_script_js
-    
-    # 由于 ts_js 和 auto_script_js 是代码，我们将其通过文件传递给 Node
-    # index.js 需要稍微配合，或者我们直接修改 target/ouyeel.js
-    
-    with open("target/ouyeel.js", "w", encoding="utf-8") as f:
-        f.write("// Dynamic injected content\n")
-        f.write(ts_js + "\n")
-        f.write(auto_script_js + "\n")
-    
-    # 将 meta 等非 JS 代码的辅助配置放入 dynamic_config.json
-    config = {
-        "meta": {
-            "content": meta_content
-        }
+    payload = {
+        "meta_content": meta_content,
+        "ts_js": ts_js,
+        "auto_script_js": auto_script_js
     }
-    with open("dynamic_config.json", "w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    logger.info("Calling Node.js environment to generate cookie...")
-    process = subprocess.Popen(
-        ['node', 'index.js'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding='utf-8',
-        cwd='.'
-    )
-    
-    stdout, stderr = process.communicate()
-    
-    # 优先检查 stdout 中是否有结果
-    match = re.search(r'FINAL_RESULT:(.*)', stdout)
-    if match:
-        try:
-            result = json.loads(match.group(1))
-            cookie_str = result.get('cookie', '')
-            return cookie_str
-        except json.JSONDecodeError:
-            logger.error(f"Failed to parse JSON result: {match.group(1)}")
-
-    if process.returncode != 0:
-        logger.error(f"Node.js Error: {stderr}")
+    try:
+        response = requests.post("http://localhost:3000/gen_cookie", json=payload)
+        response.raise_for_status()
+        result = response.json()
+        cookie_str = result.get("cookie", "")
+        return cookie_str
+    except Exception as e:
+        logger.error(f"Failed to call Node.js server: {e}")
         return None
-    
-    logger.error(f"FINAL_RESULT not found in Node.output. Stdout: {stdout[:500]}")
-    return None
 
 def fetch_data(page_index, cookie_str):
     """使用生成的 cookie 进行最终数据请求"""
@@ -194,7 +157,7 @@ def main():
             break
             
         # 2. 调用 Node 环境生成 Cookie
-        cookie_str = call_node_env(*params)
+        cookie_str = call_node_server(*params)
         if not cookie_str:
             break
             
